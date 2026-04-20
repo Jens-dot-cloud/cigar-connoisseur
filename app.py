@@ -5,7 +5,6 @@ import os
 
 st.set_page_config(page_title="Cigar Connoisseur", page_icon="🍂", layout="centered")
 st.title("🍂 Cigar Connoisseur")
-st.markdown("**Dein persönliches Offline-Pairing-Tool**")
 
 
 # ====================== CSV LADEN ======================
