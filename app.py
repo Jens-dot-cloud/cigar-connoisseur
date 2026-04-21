@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 
 st.set_page_config(page_title="Cigar Connoisseur", page_icon="🍂", layout="centered")
+
 st.title("🍂 Cigar Connoisseur")
 
 # ====================== ZIGARREN-PAIRING-REGELN ======================
@@ -11,15 +12,15 @@ st.markdown("""
 **Zigarren-Pairing-Regeln**
 
 Jede Zigarre wird mit drei sorgfältig abgestimmten Drinks empfohlen:
-
-- **👔 Gentleman** – kräftig & klassisch: Whiskey, Rum oder auch mal einen Cognac oder Gin?  
-- **💃 Lady** – elegant & ausgewogen: Cocktails mit und ohne Alkohol - Sie haben die Wahl!  
+- **👔 Gentleman** – kräftig & klassisch: Whiskey, Rum oder auch mal einen Cognac oder Gin?
+- **💃 Lady** – elegant & ausgewogen: Cocktails mit und ohne Alkohol - Sie haben die Wahl!
 - **🔥 Geheim-Tipp** – das Überraschungsmoment: neben Klassikern erwarten Sie hier unerwartete Kombinationen wie Wein, Sekt, Craft-Bier, besondere Tees oder kreative Mocktails
 
 Die Pairings berücksichtigen Stärke, Aromen und Charakter der Zigarre, damit das Genusserlebnis harmonisch und spannend wird.
 """)
 
 st.divider()
+
 
 # ====================== CSV LADEN ======================
 @st.cache_data(ttl=10)
@@ -28,7 +29,6 @@ def load_data():
     if not os.path.exists(file_path):
         st.error("❌ Datei 'cigars.csv' nicht gefunden!")
         st.stop()
-
     df = pd.read_csv(file_path, sep=";", encoding="utf-8", na_filter=False)
     df = df.fillna('')
     df = df.map(lambda x: str(x).strip() if isinstance(x, str) else x)
@@ -37,59 +37,106 @@ def load_data():
 
 df = load_data()
 
-# ====================== SUCHE ======================
-st.subheader("Wähle deine Zigarre")
-search = st.text_input("🔎 Suche nach Zigarre oder Marke", "").strip()
+# ====================== TABS ======================
+tab1, tab2 = st.tabs(["🔍 Zigarre auswählen", "🥃 Drink eingeben → Zigarren finden"])
 
-if search:
-    mask = (
-            df["Zigarre"].str.contains(search, case=False, na=False) |
-            df["Marke"].str.contains(search, case=False, na=False)
+# ====================== TAB 1: ZIGARRE ZUERST (unverändert) ======================
+with tab1:
+    st.subheader("Wähle deine Zigarre")
+
+    # ====================== SUCHE ======================
+    search = st.text_input("🔎 Suche nach Zigarre oder Marke", "").strip()
+    if search:
+        mask = (
+                df["Zigarre"].str.contains(search, case=False, na=False) |
+                df["Marke"].str.contains(search, case=False, na=False)
+        )
+        filtered = df[mask]
+    else:
+        filtered = df
+
+    filtered = filtered.sort_values(by="Zigarre")
+
+    if filtered.empty:
+        st.warning("Keine passende Zigarre gefunden.")
+    else:
+        selected = st.selectbox("Zigarre auswählen", filtered["Zigarre"].tolist())
+
+        if selected:
+            row = df[df["Zigarre"] == selected].iloc[0]
+            st.markdown(f"### {row['Zigarre']}")
+
+            # Neue schöne Zeile: Stärke + Geschmacksprofil (kursiv)
+            strength = row.get("Stärke", "")
+            profile = row.get("Geschmacksprofil", "")
+            if strength or profile:
+                st.markdown(f"*{strength} – {profile}*")
+
+
+            # 3 Getränke pro Kategorie
+            def show_three_drinks(title, column_name, emoji):
+                drinks = row.get(column_name, "")
+                drink_list = [d.strip() for d in drinks.split("|") if d.strip()]
+                if len(drink_list) < 3:
+                    drink_list += ["—"] * (3 - len(drink_list))
+                st.markdown(f"**{emoji} {title}**")
+                for drink in drink_list[:3]:
+                    st.write(f"• **{drink}**")
+
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                show_three_drinks("Gentleman", "Gentleman_Drink", "👔")
+            with col2:
+                show_three_drinks("Lady", "Lady_Drink", "💃")
+            with col3:
+                show_three_drinks("Geheim-Tipp", "Secret_Tip", "🔥")
+
+            st.success(f"Perfekt für die Lounge! 🍂🥃 – {datetime.now().strftime('%H:%M')}")
+
+# ====================== TAB 2: DRINK → ZIGARREN (neu) ======================
+with tab2:
+    st.subheader("🥃 Gib deinen Drink ein – passende Zigarren finden")
+
+    drink_search = st.text_input(
+        "Drink oder Stichwort eingeben (z. B. Old Fashioned, Espresso Martini, Rum Punch, Portwein, Latte Macchiato...)",
+        placeholder="z. B. Old Fashioned"
     )
-    filtered = df[mask]
-else:
-    filtered = df
 
-filtered = filtered.sort_values(by="Zigarre")
+    if drink_search:
+        term = drink_search.strip().lower()
 
-if filtered.empty:
-    st.warning("Keine passende Zigarre gefunden.")
-else:
-    selected = st.selectbox("Zigarre auswählen", filtered["Zigarre"].tolist())
+        # Suche in allen drei Spalten
+        mask = (
+                df["Gentleman_Drink"].str.lower().str.contains(term, na=False) |
+                df["Lady_Drink"].str.lower().str.contains(term, na=False) |
+                df["Secret_Tip"].str.lower().str.contains(term, na=False)
+        )
 
-    if selected:
-        row = df[df["Zigarre"] == selected].iloc[0]
+        results = df[mask].copy()
 
-        st.markdown(f"### {row['Zigarre']}")
+        if not results.empty:
+            st.success(f"✅ {len(results)} Zigarren passen zu „{drink_search}“")
+            results = results.sort_values(by=["Marke", "Zigarre"])
 
-        # Neue schöne Zeile: Stärke + Geschmacksprofil (kursiv)
-        strength = row.get("Stärke", "")
-        profile = row.get("Geschmacksprofil", "")
-        if strength or profile:
-            st.markdown(f"*{strength} – {profile}*")
+            for _, row in results.iterrows():
+                with st.expander(f"**{row['Zigarre']}** — {row['Marke']} • {row.get('Stärke', '')}"):
+                    strength = row.get("Stärke", "")
+                    profile = row.get("Geschmacksprofil", "")
+                    if strength or profile:
+                        st.markdown(f"*{strength} – {profile}*")
 
-
-        # 3 Getränke pro Kategorie
-        def show_three_drinks(title, column_name, emoji):
-            drinks = row.get(column_name, "")
-            drink_list = [d.strip() for d in drinks.split("|") if d.strip()]
-            if len(drink_list) < 3:
-                drink_list += ["—"] * (3 - len(drink_list))
-
-            st.markdown(f"**{emoji} {title}**")
-            for drink in drink_list[:3]:
-                st.write(f"• **{drink}**")
-
-
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            show_three_drinks("Gentleman", "Gentleman_Drink", "👔")
-        with col2:
-            show_three_drinks("Lady", "Lady_Drink", "💃")
-        with col3:
-            show_three_drinks("Geheim-Tipp", "Secret_Tip", "🔥")
-
-        st.success(f"Perfekt für die Lounge! 🍂🥃 – {datetime.now().strftime('%H:%M')}")
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        show_three_drinks("Gentleman", "Gentleman_Drink", "👔")  # gleiche Funktion wie oben
+                    with col2:
+                        show_three_drinks("Lady", "Lady_Drink", "💃")
+                    with col3:
+                        show_three_drinks("Geheim-Tipp", "Secret_Tip", "🔥")
+        else:
+            st.warning(f"Keine Zigarre mit „{drink_search}“ gefunden. Probiere ein anderes Stichwort.")
+    else:
+        st.info("Gib einen Drink oder ein Stichwort ein, um passende Zigarren zu finden.")
 
 # ====================== NEUES PAIRING ======================
 st.markdown("---")
