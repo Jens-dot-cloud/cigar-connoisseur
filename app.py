@@ -6,6 +6,20 @@ import os
 st.set_page_config(page_title="Cigar Connoisseur", page_icon="🍂", layout="centered")
 st.title("🍂 Cigar Connoisseur")
 
+# ====================== ZIGARREN-PAIRING-REGELN ======================
+st.markdown("""
+**Zigarren-Pairing-Regeln**
+
+Jede Zigarre wird mit drei sorgfältig abgestimmten Drinks empfohlen:
+
+- **👔 Gentleman** – kräftig & klassisch: Whiskey, Rum oder auch mal einen Cognac oder Gin?  
+- **💃 Lady** – elegant & ausgewogen: Cocktails mit und ohne Alkohol - Sie haben die Wahl!  
+- **🔥 Geheim-Tipp** – das Überraschungsmoment: neben Klassikern erwarten Sie hier unerwartete Kombinationen wie Wein, Sekt, Craft-Bier, besondere Tees oder kreative Mocktails
+
+Die Pairings berücksichtigen Stärke, Aromen und Charakter der Zigarre, damit das Genusserlebnis harmonisch und spannend wird.
+""")
+
+st.divider()
 
 # ====================== CSV LADEN ======================
 @st.cache_data(ttl=10)
